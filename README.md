@@ -51,8 +51,8 @@
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/yourusername/project-management-system.git
-cd project-management-system
+git clone https://github.com/sswun/project_manage.git
+cd project_manage
 ```
 
 2. **启动服务器**
@@ -75,7 +75,7 @@ python server.py 8080
 ## 📁 项目结构
 
 ```
-project-management-system/
+project_manage/
 ├── server.py                 # 主服务器文件
 ├── server_stable.py         # 稳定版服务器
 ├── auth_server.py           # 认证服务器
@@ -172,7 +172,7 @@ python server.py <端口号>
 ### 本地部署
 ```bash
 git clone <repository-url>
-cd project-management-system
+cd project_manage
 python server.py
 ```
 
@@ -283,9 +283,9 @@ CMD ["python", "server.py"]
 
 ## 📞 联系方式
 
-- 项目主页：https://github.com/yourusername/project-management-system
-- 问题反馈：https://github.com/yourusername/project-management-system/issues
-- 邮箱：your-email@example.com
+- 项目主页：https://github.com/sswun/project_manage
+- 问题反馈：https://github.com/sswun/project_manage/issues
+- 邮箱：sswunhuei@qq.com
 
 ---
 
