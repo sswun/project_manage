@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务控制面板 - project_manager项目管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .panel-header h1 {
+            color: #4a5568;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .panel-header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .status-card.running {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .status-card.stopped {
+            border-color: #f56565;
+            background: #fff5f5;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .status-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-indicator.running {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-indicator.stopped {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.running {
+            background: #48bb78;
+        }
+
+        .status-dot.stopped {
+            background: #f56565;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .control-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+            color: white;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+        }
+
+        .btn-status {
+            background: linear-gradient(135deg, #667eea, #5a67d8);
+            color: white;
+        }
+
+        .btn-logs {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+            color: white;
+        }
+
+        .logs-section {
+            background: #1a202c;
+            border-radius: 15px;
+            padding: 20px;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .logs-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .logs-title {
+            color: #a0aec0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .logs-content {
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .logs-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-content::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+
+        .logs-content::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+
+        .refresh-btn {
+            background: #4a5568;
+            color: #e2e8f0;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #718096;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 10000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        .notification.info {
+            background: #4299e1;
+        }
+
+        @media (max-width: 600px) {
+            .control-panel {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .status-details {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <div class="panel-header">
+            <h1>🎛️ 服务控制面板</h1>
+            <p>project_manager项目管理系统</p>
+        </div>
+
+        <div class="status-card" id="statusCard">
+            <div class="status-header">
+                <div class="status-title">服务状态</div>
+                <div class="status-indicator" id="statusIndicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">检查中...</span>
+                </div>
+            </div>
+            <div class="status-details">
+                <div class="detail-item">
+                    <div class="detail-label">进程ID</div>
+                    <div class="detail-value" id="pidValue">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">端口</div>
+                    <div class="detail-value" id="portValue">8001</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">CPU使用率</div>
+                    <div class="detail-value" id="cpuValue">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">内存使用率</div>
+                    <div class="detail-value" id="memoryValue">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">运行时间</div>
+                    <div class="detail-value" id="runtimeValue">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">启动时间</div>
+                    <div class="detail-value" id="startTimeValue">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="control-btn btn-start" id="startBtn" onclick="startService()">
+                <i class="fas fa-play"></i>
+                启动
+            </button>
+            <button class="control-btn btn-stop" id="stopBtn" onclick="stopService()">
+                <i class="fas fa-stop"></i>
+                停止
+            </button>
+            <button class="control-btn btn-restart" id="restartBtn" onclick="restartService()">
+                <i class="fas fa-redo"></i>
+                重启
+            </button>
+            <button class="control-btn btn-status" id="refreshBtn" onclick="refreshStatus()">
+                <i class="fas fa-sync"></i>
+                刷新状态
+            </button>
+            <button class="control-btn btn-logs" id="logsBtn" onclick="viewLogs()">
+                <i class="fas fa-file-alt"></i>
+                查看日志
+            </button>
+        </div>
+
+        <div class="logs-section" id="logsSection" style="display: none;">
+            <div class="logs-header">
+                <div class="logs-title">系统日志</div>
+                <button class="refresh-btn" onclick="refreshLogs()">
+                    <i class="fas fa-sync"></i> 刷新
+                </button>
+            </div>
+            <div class="logs-content" id="logsContent">
+                正在加载日志...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 服务控制API
+        class ServiceController {
+            constructor() {
+                this.autoRefresh = null;
+                this.startAutoRefresh();
+            }
+
+            async startAutoRefresh() {
+                // 每5秒自动刷新状态
+                this.autoRefresh = setInterval(() => {
+                    this.refreshStatus();
+                }, 5000);
+                this.refreshStatus();
+            }
+
+            async callAPI(action) {
+                try {
+                    const response = await fetch(`/api/service-control`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ action: action })
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('API调用失败:', error);
+                    showNotification(`操作失败: ${error.message}`, 'error');
+                    return null;
+                }
+            }
+
+            async refreshStatus() {
+                const result = await this.callAPI('status');
+                if (result) {
+                    this.updateStatusDisplay(result);
+                }
+            }
+
+            updateStatusDisplay(status) {
+                const statusCard = document.getElementById('statusCard');
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                const statusIndicator = document.getElementById('statusIndicator');
+
+                // 更新状态卡片样式
+                statusCard.className = `status-card ${status.status}`;
+                statusDot.className = `status-dot ${status.status}`;
+                statusIndicator.className = `status-indicator ${status.status}`;
+
+                // 更新状态文本
+                statusText.textContent = status.status === 'running' ? '运行中' : '已停止';
+
+                // 更新详细信息
+                document.getElementById('pidValue').textContent = status.pid || '-';
+                document.getElementById('portValue').textContent = status.port || '8001';
+                document.getElementById('cpuValue').textContent = status.cpu_usage || '-';
+                document.getElementById('memoryValue').textContent = status.memory_usage || '-';
+                document.getElementById('runtimeValue').textContent = status.runtime || '-';
+                document.getElementById('startTimeValue').textContent = status.start_time || '-';
+
+                // 更新按钮状态
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const restartBtn = document.getElementById('restartBtn');
+
+                if (status.status === 'running') {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    restartBtn.disabled = false;
+                } else {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    restartBtn.disabled = true;
+                }
+            }
+
+            async startService() {
+                showNotification('正在启动服务...', 'info');
+                const result = await this.callAPI('start');
+                if (result && result.success) {
+                    showNotification('服务启动成功！', 'success');
+                    setTimeout(() => this.refreshStatus(), 2000);
+                }
+            }
+
+            async stopService() {
+                showNotification('正在停止服务...', 'info');
+                const result = await this.callAPI('stop');
+                if (result && result.success) {
+                    showNotification('服务已停止', 'success');
+                    setTimeout(() => this.refreshStatus(), 2000);
+                }
+            }
+
+            async restartService() {
+                showNotification('正在重启服务...', 'info');
+                const result = await this.callAPI('restart');
+                if (result && result.success) {
+                    showNotification('服务重启成功！', 'success');
+                    setTimeout(() => this.refreshStatus(), 3000);
+                }
+            }
+
+            async viewLogs() {
+                const logsSection = document.getElementById('logsSection');
+                if (logsSection.style.display === 'none') {
+                    const result = await this.callAPI('logs');
+                    if (result) {
+                        document.getElementById('logsContent').textContent = result.logs || '无日志数据';
+                        logsSection.style.display = 'block';
+                        logsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                } else {
+                    logsSection.style.display = 'none';
+                }
+            }
+
+            async refreshLogs() {
+                const result = await this.callAPI('logs');
+                if (result) {
+                    document.getElementById('logsContent').textContent = result.logs || '无日志数据';
+                }
+            }
+        }
+
+        // 通知系统
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.add('show'), 100);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // 初始化服务控制器
+        const serviceController = new ServiceController();
+
+        // 全局函数
+        function startService() {
+            serviceController.startService();
+        }
+
+        function stopService() {
+            serviceController.stopService();
+        }
+
+        function restartService() {
+            serviceController.restartService();
+        }
+
+        function refreshStatus() {
+            serviceController.refreshStatus();
+        }
+
+        function viewLogs() {
+            serviceController.viewLogs();
+        }
+
+        function refreshLogs() {
+            serviceController.refreshLogs();
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 显示加载提示
+            showNotification('服务控制面板已加载', 'success');
+        });
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', function() {
+            if (serviceController.autoRefresh) {
+                clearInterval(serviceController.autoRefresh);
+            }
+        });
+    </script>
+</body>
+</html>

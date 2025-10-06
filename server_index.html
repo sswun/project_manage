@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>project_manager工作项目管理</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 通知系统样式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+        }
+
+        /* 连接状态指示器 */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.connected {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+        }
+
+        /* 用户信息样式 */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 15px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .welcome-text {
+            opacity: 0.8;
+        }
+
+        .username {
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            margin-left: 5px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 连接状态指示器 -->
+    <div class="connection-status" id="connectionStatus">
+        <i class="fas fa-circle"></i> 连接中...
+    </div>
+
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-rocket"></i>
+                    project_manager工作项目管理
+                </h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">
+                        <i class="fas fa-home"></i> 仪表盘
+                    </button>
+                    <button class="nav-btn" data-page="plans">
+                        <i class="fas fa-lightbulb"></i> 计划
+                    </button>
+                    <button class="nav-btn" data-page="projects">
+                        <i class="fas fa-project-diagram"></i> 项目
+                    </button>
+                    <button class="nav-btn" data-page="records">
+                        <i class="fas fa-file-alt"></i> 工作记录
+                    </button>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-info">
+                        <span class="welcome-text">欢迎，</span>
+                        <span class="username" id="currentUsername">用户</span>
+                        <button class="logout-btn" id="logoutBtn" title="登出">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    <button class="add-plan-btn" id="addPlanBtn">
+                        <i class="fas fa-plus"></i> 新建计划
+                    </button>
+                    <button class="add-project-btn" id="addProjectBtn">
+                        <i class="fas fa-plus"></i> 新建项目
+                    </button>
+                </div>
+            </div>
+            <div class="creator-info">
+                <i class="fas fa-server"></i> project_manager项目管理 - 数据保存到服务器
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Page -->
+            <section class="page" id="dashboardPage">
+                <div class="dashboard-overview">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div class="stat-number" id="totalPlans">0</div>
+                            <div class="stat-label">总计划数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="stat-number" id="totalProjects">0</div>
+                            <div class="stat-label">总项目数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <div class="stat-number" id="activeProjects">0</div>
+                            <div class="stat-label">进行中</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-number" id="completedProjects">0</div>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="recent-section">
+                        <h3>最新计划</h3>
+                        <div class="plan-grid" id="recentPlansGrid">
+                            <!-- 计划卡片将动态生成 -->
+                        </div>
+                    </div>
+
+                    <div class="recent-section">
+                        <h3>最新项目</h3>
+                        <div class="project-grid" id="recentProjectsGrid">
+                            <!-- 项目卡片将动态生成 -->
+                        </div>
+                    </div>
+
+                    <div class="quick-actions-section">
+                        <h3>快速操作</h3>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="showAddPlanModal()">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>创建新计划</span>
+                            </button>
+                            <button class="action-btn" onclick="showAddProjectModal()">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>创建新项目</span>
+                            </button>
+                            <button class="action-btn" onclick="document.getElementById('recordFileInput').click()">
+                                <i class="fas fa-upload"></i>
+                                <span>上传工作记录</span>
+                            </button>
+                            <button class="action-btn" onclick="exportData()">
+                                <i class="fas fa-download"></i>
+                                <span>导出数据</span>
+                            </button>
+                            <button class="action-btn" onclick="document.getElementById('backupFileInput').click()">
+                                <i class="fas fa-history"></i>
+                                <span>恢复数据</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Plans Page -->
+            <section class="page hidden" id="plansPage">
+                <div class="page-header">
+                    <h2>计划管理</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="planSearch" placeholder="搜索计划..." class="search-input">
+                        <select id="planStatusFilter" class="filter-select">
+                            <option value="all">全部状态</option>
+                            <option value="draft">草稿</option>
+                            <option value="active">执行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="archived">已归档</option>
+                        </select>
+                        <button class="sort-btn" id="planSortBtn" onclick="togglePlanSort()" title="切换排序">
+                            <i class="fas fa-sort" id="planSortIcon"></i>
+                            <span id="planSortText">时间: 早→晚</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="plans-container">
+                    <div class="plan-grid" id="allPlansGrid">
+                        <!-- 计划卡片将动态生成 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Page -->
+            <section class="page hidden" id="projectsPage">
+                <div class="page-header">
+                    <h2>项目管理</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="projectSearch" placeholder="搜索项目..." class="search-input">
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">全部状态</option>
+                            <option value="planning">计划中</option>
+                            <option value="active">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="paused">已暂停</option>
+                        </select>
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="all">全部分类</option>
+                            <option value="work">工作</option>
+                            <option value="personal">个人</option>
+                            <option value="study">学习</option>
+                            <option value="creative">创意</option>
+                        </select>
+                        <button class="sort-btn" id="projectSortBtn" onclick="toggleProjectSort()" title="切换排序">
+                            <i class="fas fa-sort" id="projectSortIcon"></i>
+                            <span id="projectSortText">时间: 早→晚</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="projects-container">
+                    <div class="project-grid" id="allProjectsGrid">
+                        <!-- 项目卡片将动态生成 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Records Page -->
+            <section class="page hidden" id="recordsPage">
+                <div class="page-header">
+                    <h2>工作记录</h2>
+                    <button class="upload-btn" onclick="document.getElementById('recordFileInput').click()">
+                        <i class="fas fa-upload"></i> 上传记录
+                    </button>
+                </div>
+
+                <div class="records-container">
+                    <div class="record-list" id="recordList">
+                        <!-- 记录将动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 模态框部分 (复用原来的模态框) -->
+    <!-- Plan Modal -->
+    <div class="modal" id="planModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="planModalTitle">新建计划</h3>
+                <button class="close-btn" onclick="closePlanModal()">&times;</button>
+            </div>
+            <form id="planForm">
+                <div class="form-group">
+                    <label for="planName">计划名称</label>
+                    <input type="text" id="planName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="planDescription">计划描述</label>
+                    <textarea id="planDescription" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="planCategory">计划分类</label>
+                    <select id="planCategory">
+                        <option value="career">职业发展</option>
+                        <option value="skill">技能提升</option>
+                        <option value="life">生活规划</option>
+                        <option value="creative">创意项目</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="planStatus">计划状态</label>
+                    <select id="planStatus">
+                        <option value="draft">草稿</option>
+                        <option value="active">执行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="archived">已归档</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="planStartDate">开始日期</label>
+                    <input type="date" id="planStartDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="planEndDate">结束日期</label>
+                    <input type="date" id="planEndDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="planColor">背景颜色</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="planColor" value="#6366f1">
+                        <div class="color-presets">
+                            <button type="button" class="color-preset" style="background: #6366f1" data-color="#6366f1"></button>
+                            <button type="button" class="color-preset" style="background: #8b5cf6" data-color="#8b5cf6"></button>
+                            <button type="button" class="color-preset" style="background: #ec4899" data-color="#ec4899"></button>
+                            <button type="button" class="color-preset" style="background: #f59e0b" data-color="#f59e0b"></button>
+                            <button type="button" class="color-preset" style="background: #10b981" data-color="#10b981"></button>
+                            <button type="button" class="color-preset" style="background: #3b82f6" data-color="#3b82f6"></button>
+                            <button type="button" class="color-preset" style="background: #64748b" data-color="#64748b"></button>
+                            <button type="button" class="color-preset" style="background: #78716c" data-color="#78716c"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closePlanModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新建项目</h3>
+                <button class="close-btn" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label for="projectName">项目名称</label>
+                    <input type="text" id="projectName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectPlan">所属计划</label>
+                    <select id="projectPlan">
+                        <option value="">不关联计划</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectDescription">项目描述</label>
+                    <textarea id="projectDescription" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectCategory">项目分类</label>
+                    <select id="projectCategory">
+                        <option value="work">工作</option>
+                        <option value="personal">个人</option>
+                        <option value="study">学习</option>
+                        <option value="creative">创意</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectStatus">项目状态</label>
+                    <select id="projectStatus">
+                        <option value="planning">计划中</option>
+                        <option value="active">进行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="paused">已暂停</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectPriority">优先级</label>
+                    <select id="projectPriority">
+                        <option value="low">低</option>
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectDeadline">截止日期</label>
+                    <input type="date" id="projectDeadline">
+                </div>
+
+                <div class="form-group">
+                    <label for="projectColor">背景颜色</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="projectColor" value="#3b82f6">
+                        <div class="color-presets">
+                            <button type="button" class="color-preset" style="background: #3b82f6" data-color="#3b82f6"></button>
+                            <button type="button" class="color-preset" style="background: #8b5cf6" data-color="#8b5cf6"></button>
+                            <button type="button" class="color-preset" style="background: #ec4899" data-color="#ec4899"></button>
+                            <button type="button" class="color-preset" style="background: #f59e0b" data-color="#f59e0b"></button>
+                            <button type="button" class="color-preset" style="background: #10b981" data-color="#10b981"></button>
+                            <button type="button" class="color-preset" style="background: #6366f1" data-color="#6366f1"></button>
+                            <button type="button" class="color-preset" style="background: #64748b" data-color="#64748b"></button>
+                            <button type="button" class="color-preset" style="background: #78716c" data-color="#78716c"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeProjectModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">新建任务</h3>
+                <button class="close-btn" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="taskName">任务名称</label>
+                    <input type="text" id="taskName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskDescription">任务描述</label>
+                    <textarea id="taskDescription" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskStatus">任务状态</label>
+                    <select id="taskStatus">
+                        <option value="pending">未完成</option>
+                        <option value="in-progress">进行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="blocked">受阻</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskPriority">任务优先级</label>
+                    <select id="taskPriority">
+                        <option value="low">低</option>
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeTaskModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plan Detail Modal -->
+    <div class="modal" id="planDetailModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="planDetailTitle">计划详情</h3>
+                <button class="close-btn" onclick="closePlanDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="plan-cover-image" id="planCoverImage">
+                    <!-- 计划封面图片 -->
+                </div>
+                <div class="plan-detail-info">
+                    <!-- 计划详情内容 -->
+                </div>
+                <div class="related-projects">
+                    <div class="related-projects-header">
+                        <h4>相关项目</h4>
+                        <button class="sort-btn small" id="planProjectSortBtn" onclick="togglePlanProjectSort(currentViewingPlan?.id)" title="切换项目排序">
+                            <i class="fas fa-sort" id="planProjectSortIcon"></i>
+                            <span id="planProjectSortText">时间: 早→晚</span>
+                        </button>
+                    </div>
+                    <div class="project-list" id="planProjectsList">
+                        <!-- 相关项目列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div class="modal" id="projectDetailModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="projectDetailTitle">项目详情</h3>
+                <button class="close-btn" onclick="closeProjectDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-cover-image" id="projectCoverImage">
+                    <!-- 项目封面图片 -->
+                </div>
+                <div class="project-detail-info">
+                    <!-- 项目详情内容 -->
+                </div>
+                <div class="tasks-section">
+                    <div class="tasks-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <h4>任务列表</h4>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button class="sort-btn small" id="projectTaskSortBtn" onclick="toggleProjectTaskSort(currentViewingProject?.id)" title="切换任务排序">
+                                    <i class="fas fa-sort" id="projectTaskSortIcon"></i>
+                                    <span id="projectTaskSortText">时间: 早→晚</span>
+                                </button>
+                                <button class="add-task-btn" onclick="showAddTaskModal()">
+                                    <i class="fas fa-plus"></i> 添加任务
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tasks-list" id="projectTasksList">
+                        <!-- 任务列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="recordFileInput" accept=".pdf,.txt,.md" style="display: none;">
+    <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+
+    <!-- 引入服务器版本的脚本 -->
+    <script src="ui_functions.js"></script>
+    <script src="server_script.js"></script>
+
+    <!-- 处理数据提交的服务器版本函数 -->
+    <script>
+        // 防止重复绑定的标记
+        let eventsBound = false;
+
+        // 排序状态管理
+        let planSortOrder = 'asc'; // 'asc' 或 'desc'
+        let projectSortOrder = 'asc';
+        let planProjectSortOrder = {}; // 每个计划内项目的排序状态
+        let projectTaskSortOrder = {}; // 每个项目内任务的排序状态
+
+        // 切换计划排序
+        function togglePlanSort() {
+            planSortOrder = planSortOrder === 'asc' ? 'desc' : 'asc';
+            updateSortButton('plan', planSortOrder);
+            renderPlans();
+        }
+
+        // 切换项目排序
+        function toggleProjectSort() {
+            projectSortOrder = projectSortOrder === 'asc' ? 'desc' : 'asc';
+            updateSortButton('project', projectSortOrder);
+            renderProjects();
+        }
+
+        // 切换计划内项目排序
+        function togglePlanProjectSort(planId) {
+            planProjectSortOrder[planId] = planProjectSortOrder[planId] === 'asc' ? 'desc' : 'asc';
+            viewPlanDetail(planId); // 重新渲染计划详情
+        }
+
+        // 切换项目内任务排序
+        function toggleProjectTaskSort(projectId) {
+            projectTaskSortOrder[projectId] = projectTaskSortOrder[projectId] === 'asc' ? 'desc' : 'asc';
+            viewProjectDetail(projectId); // 重新渲染项目详情
+        }
+
+        // 更新排序按钮显示
+        function updateSortButton(type, order) {
+            if (type === 'plan') {
+                const btn = document.getElementById('planSortBtn');
+                const icon = document.getElementById('planSortIcon');
+                const text = document.getElementById('planSortText');
+
+                if (btn && icon && text) {
+                    btn.className = `sort-btn ${order}`;
+                    icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                    text.textContent = order === 'asc' ? '时间: 早→晚' : '时间: 晚→早';
+                }
+            } else if (type === 'project') {
+                const btn = document.getElementById('projectSortBtn');
+                const icon = document.getElementById('projectSortIcon');
+                const text = document.getElementById('projectSortText');
+
+                if (btn && icon && text) {
+                    btn.className = `sort-btn ${order}`;
+                    icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                    text.textContent = order === 'asc' ? '时间: 早→晚' : '时间: 晚→早';
+                }
+            }
+        }
+
+        // 排序数据
+        function sortByDate(data, order = 'asc', dateField = 'createdAt') {
+            return [...data].sort((a, b) => {
+                const dateA = new Date(a[dateField] || 0);
+                const dateB = new Date(b[dateField] || 0);
+                return order === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+        }
+
+        // 更新计划内项目排序按钮显示
+        function updatePlanProjectSortButton(planId, order) {
+            const btn = document.getElementById('planProjectSortBtn');
+            const icon = document.getElementById('planProjectSortIcon');
+            const text = document.getElementById('planProjectSortText');
+
+            if (btn && icon && text) {
+                btn.className = `sort-btn small ${order}`;
+                icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                text.textContent = order === 'asc' ? '时间: 早→晚' : '时间: 晚→早';
+            }
+        }
+
+        // 更新项目内任务排序按钮显示
+        function updateProjectTaskSortButton(projectId, order) {
+            const btn = document.getElementById('projectTaskSortBtn');
+            const icon = document.getElementById('projectTaskSortIcon');
+            const text = document.getElementById('projectTaskSortText');
+
+            if (btn && icon && text) {
+                btn.className = `sort-btn small ${order}`;
+                icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                text.textContent = order === 'asc' ? '时间: 早→晚' : '时间: 晚→早';
+            }
+        }
+
+        // 增强版的renderPlans函数，支持排序
+        function renderPlans() {
+            const container = document.getElementById('allPlansGrid');
+            if (!container) return;
+
+            if (plans.length === 0) {
+                container.innerHTML = '<p class="no-data">暂无计划</p>';
+                return;
+            }
+
+            // 应用排序
+            const sortedPlans = sortByDate(plans, planSortOrder);
+
+            const categoryNames = {
+                career: '职业发展',
+                skill: '技能提升',
+                life: '生活规划',
+                creative: '创意项目'
+            };
+
+            const statusNames = {
+                draft: '草稿',
+                active: '执行中',
+                completed: '已完成',
+                archived: '已归档'
+            };
+
+            container.innerHTML = sortedPlans.map(plan => {
+                // 计算相关项目数量
+                const relatedProjects = projects.filter(p => p.planId === plan.id);
+                const activeProjects = relatedProjects.filter(p => p.status === 'active').length;
+
+                // 计算进度
+                const completedProjects = relatedProjects.filter(p => p.status === 'completed').length;
+                const progress = relatedProjects.length > 0 ? Math.round((completedProjects / relatedProjects.length) * 100) : 0;
+
+                // 格式化日期
+                const formatDate = (dateString) => {
+                    if (!dateString) return '未设定';
+                    return new Date(dateString).toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                };
+
+                return `
+                    <div class="plan-card status-${plan.status}" style="--card-color: ${plan.color || '#6366f1'}" onclick="viewPlanDetail('${plan.id}')">
+                        <div class="plan-content">
+                            <div class="plan-header">
+                                <h4>${plan.name}</h4>
+                                <div class="plan-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${progress}%"></div>
+                                    </div>
+                                    <span class="progress-text">${progress}%</span>
+                                </div>
+                            </div>
+                            <div class="plan-description">${plan.description || '暂无描述'}</div>
+                            <div class="plan-meta">
+                                <span class="plan-category">${categoryNames[plan.category]}</span>
+                                <span class="plan-status status-${plan.status}">${statusNames[plan.status]}</span>
+                            </div>
+                            <div class="plan-stats">
+                                <div class="stat-item">
+                                    <i class="fas fa-project-diagram"></i>
+                                    <span>${relatedProjects.length} 个项目</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-play-circle"></i>
+                                    <span>${activeProjects} 个进行中</span>
+                                </div>
+                            </div>
+                            <div class="plan-dates">
+                                <div class="date-item">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    <span>创建: ${formatDate(plan.createdAt)}</span>
+                                </div>
+                                ${plan.endDate ? `
+                                <div class="date-item">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span>截止: ${formatDate(plan.endDate)}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="plan-actions">
+                            <button class="action-btn" onclick="event.stopPropagation(); editPlan('${plan.id}')" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deletePlan('${plan.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 增强版的renderProjects函数，支持排序
+        function renderProjects() {
+            const container = document.getElementById('allProjectsGrid');
+            if (!container) return;
+
+            if (projects.length === 0) {
+                container.innerHTML = '<p class="no-data">暂无项目</p>';
+                return;
+            }
+
+            // 应用排序
+            const sortedProjects = sortByDate(projects, projectSortOrder);
+
+            const categoryNames = {
+                work: '工作',
+                personal: '个人',
+                study: '学习',
+                creative: '创意'
+            };
+
+            const statusNames = {
+                planning: '计划中',
+                active: '进行中',
+                completed: '已完成',
+                paused: '已暂停'
+            };
+
+            const priorityNames = {
+                low: '低',
+                medium: '中',
+                high: '高'
+            };
+
+            container.innerHTML = sortedProjects.map(project => {
+                // 获取关联的计划信息
+                const relatedPlan = project.planId ? plans.find(p => p.id === project.planId) : null;
+
+                // 计算任务进度
+                const projectTasks = tasks.filter(t => t.projectId === project.id);
+                const completedTasks = projectTasks.filter(t => t.status === 'completed').length;
+                const progress = projectTasks.length > 0 ? Math.round((completedTasks / projectTasks.length) * 100) : 0;
+
+                // 格式化日期
+                const formatDate = (dateString) => {
+                    if (!dateString) return '未设定';
+                    return new Date(dateString).toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                };
+
+                // 检查是否过期
+                const isOverdue = project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed';
+                const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+                return `
+                    <div class="project-card status-${project.status} ${isOverdue ? 'overdue' : ''}" style="--card-color: ${project.color || '#3b82f6'}" onclick="viewProjectDetail('${project.id}')">
+                        <div class="project-content">
+                            <div class="project-header">
+                                <h4>${project.name}</h4>
+                                <div class="project-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${progress}%"></div>
+                                    </div>
+                                    <span class="progress-text">${progress}%</span>
+                                </div>
+                            </div>
+                            <div class="project-description">${project.description || '暂无描述'}</div>
+                            <div class="project-meta">
+                                <span class="project-category">${categoryNames[project.category]}</span>
+                                <span class="project-status status-${project.status}">${statusNames[project.status]}</span>
+                                <span class="project-priority priority-${project.priority}">
+                                    <i class="fas fa-flag"></i> ${priorityNames[project.priority]}
+                                </span>
+                            </div>
+                            <div class="project-stats">
+                                <div class="stat-item">
+                                    <i class="fas fa-tasks"></i>
+                                    <span>${projectTasks.length} 个任务</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>${completedTasks} 个完成</span>
+                                </div>
+                            </div>
+                            <div class="project-dates">
+                                <div class="date-item">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    <span>创建: ${formatDate(project.createdAt)}</span>
+                                </div>
+                                ${project.endDate ? `
+                                <div class="date-item ${isOverdue ? 'overdue' : ''}">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span>截止: ${formatDate(project.endDate)} ${isOverdue ? '(已过期)' : daysLeft !== null && daysLeft >= 0 ? `(${daysLeft}天)` : ''}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            ${relatedPlan ? `
+                            <div class="project-plan">
+                                <i class="fas fa-link"></i>
+                                <span>所属计划: ${relatedPlan.name}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="project-actions">
+                            <button class="action-btn" onclick="event.stopPropagation(); editProject('${project.id}')" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteProject('${project.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 重新绑定事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            if (eventsBound) return;
+            eventsBound = true;
+
+            // 确保重要函数存在
+            if (typeof showAddPlanModal === 'undefined') {
+                window.showAddPlanModal = function() {
+                    currentEditingPlan = null;
+                    document.getElementById('planModalTitle').textContent = '新建计划';
+                    document.getElementById('planForm').reset();
+                    document.getElementById('planModal').classList.add('show');
+                };
+            }
+
+            if (typeof showAddProjectModal === 'undefined') {
+                window.showAddProjectModal = function() {
+                    currentEditingProject = null;
+                    document.getElementById('modalTitle').textContent = '新建项目';
+                    document.getElementById('projectForm').reset();
+                    updateProjectPlanOptions();
+                    document.getElementById('projectModal').classList.add('show');
+                };
+            }
+
+            if (typeof closePlanModal === 'undefined') {
+                window.closePlanModal = function() {
+                    document.getElementById('planModal').classList.remove('show');
+                    document.getElementById('planForm').reset();
+                    currentEditingPlan = null;
+                };
+            }
+
+            if (typeof closeProjectModal === 'undefined') {
+                window.closeProjectModal = function() {
+                    document.getElementById('projectModal').classList.remove('show');
+                    document.getElementById('projectForm').reset();
+                    currentEditingProject = null;
+                };
+            }
+
+            if (typeof closeTaskModal === 'undefined') {
+                window.closeTaskModal = function() {
+                    document.getElementById('taskModal').classList.remove('show');
+                    document.getElementById('taskForm').reset();
+                    currentEditingTask = null;
+                };
+            }
+
+            if (typeof showAddTaskModal === 'undefined') {
+                window.showAddTaskModal = function() {
+                    if (!currentViewingProject) return;
+                    currentEditingTask = null;
+                    document.getElementById('taskModalTitle').textContent = '新建任务';
+                    document.getElementById('taskForm').reset();
+                    document.getElementById('taskModal').classList.add('show');
+                };
+            }
+
+            // 获取表单并绑定提交事件
+            const planForm = document.getElementById('planForm');
+            const projectForm = document.getElementById('projectForm');
+            const taskForm = document.getElementById('taskForm');
+
+            if (planForm) {
+                planForm.addEventListener('submit', handlePlanSubmit);
+            }
+            if (projectForm) {
+                projectForm.addEventListener('submit', handleProjectSubmit);
+            }
+            if (taskForm) {
+                taskForm.addEventListener('submit', handleTaskSubmit);
+            }
+
+            // 其他事件绑定
+            const recordFileInput = document.getElementById('recordFileInput');
+            if (recordFileInput) {
+                recordFileInput.addEventListener('change', handleFileUpload);
+            }
+
+            const backupFileInput = document.getElementById('backupFileInput');
+            if (backupFileInput) {
+                backupFileInput.addEventListener('change', handleBackupFileUpload);
+            }
+
+            // 颜色选择器事件绑定
+            document.querySelectorAll('.color-preset').forEach(button => {
+                button.addEventListener('click', function() {
+                    const color = this.getAttribute('data-color');
+                    const colorInput = this.closest('.color-picker-container').querySelector('input[type="color"]');
+                    if (colorInput) {
+                        colorInput.value = color;
+                    }
+                });
+            });
+
+            // 导航按钮事件绑定
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (typeof switchPage === 'function') {
+                        switchPage(this.dataset.page);
+                    }
+                });
+            });
+
+            // 头部按钮事件绑定
+            const addPlanBtn = document.getElementById('addPlanBtn');
+            if (addPlanBtn) {
+                addPlanBtn.addEventListener('click', showAddPlanModal);
+            }
+
+            const addProjectBtn = document.getElementById('addProjectBtn');
+            if (addProjectBtn) {
+                addProjectBtn.addEventListener('click', showAddProjectModal);
+            }
+
+            // 筛选功能事件绑定（确保筛选函数存在）
+            const planSearch = document.getElementById('planSearch');
+            if (planSearch) {
+                planSearch.addEventListener('input', function() {
+                    if (typeof filterPlans === 'function') {
+                        filterPlans();
+                    }
+                });
+            }
+
+            const planStatusFilter = document.getElementById('planStatusFilter');
+            if (planStatusFilter) {
+                planStatusFilter.addEventListener('change', function() {
+                    if (typeof filterPlans === 'function') {
+                        filterPlans();
+                    }
+                });
+            }
+
+            const projectSearch = document.getElementById('projectSearch');
+            if (projectSearch) {
+                projectSearch.addEventListener('input', function() {
+                    if (typeof filterProjects === 'function') {
+                        filterProjects();
+                    }
+                });
+            }
+
+            const statusFilter = document.getElementById('statusFilter');
+            if (statusFilter) {
+                statusFilter.addEventListener('change', function() {
+                    if (typeof filterProjects === 'function') {
+                        filterProjects();
+                    }
+                });
+            }
+
+            const categoryFilter = document.getElementById('categoryFilter');
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', function() {
+                    if (typeof filterProjects === 'function') {
+                        filterProjects();
+                    }
+                });
+            }
+
+            // 模态框点击外部关闭
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('show');
+                    }
+                });
+            });
+
+            setTimeout(() => {
+                updateConnectionStatus(true);
+            }, 1000);
+        });
+
+        // 页面切换功能
+        function switchPage(pageName) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            // 显示目标页面
+            const targetPage = document.getElementById(pageName + 'Page');
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+            }
+
+            // 更新导航按钮状态
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`[data-page="${pageName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+        }
+
+        // 计划表单提交处理
+        async function handlePlanSubmit(e) {
+            e.preventDefault();
+            showLoading(true);
+
+            const planData = {
+                name: document.getElementById('planName').value,
+                description: document.getElementById('planDescription').value,
+                category: document.getElementById('planCategory').value,
+                status: document.getElementById('planStatus').value,
+                startDate: document.getElementById('planStartDate').value,
+                endDate: document.getElementById('planEndDate').value,
+                color: document.getElementById('planColor').value
+            };
+
+            try {
+                let success;
+                if (currentEditingPlan) {
+                    success = await dataManager.updatePlan(currentEditingPlan.id, planData);
+                } else {
+                    success = await dataManager.addPlan(planData);
+                }
+
+                if (success) {
+                    // 同步数据到全局变量
+                    syncGlobalVariables();
+                    // 更新UI
+                    updateDashboard();
+                    renderPlans();
+                    updateProjectPlanOptions();
+                    // 关闭模态框
+                    closePlanModal();
+                    showNotification(currentEditingPlan ? '计划更新成功！' : '计划创建成功！', 'success');
+                } else {
+                    showNotification('保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('计划保存错误:', error);
+                showNotification('保存失败，请检查网络连接', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 项目表单提交处理
+        async function handleProjectSubmit(e) {
+            e.preventDefault();
+            showLoading(true);
+
+            const projectData = {
+                name: document.getElementById('projectName').value,
+                planId: document.getElementById('projectPlan').value,
+                description: document.getElementById('projectDescription').value,
+                category: document.getElementById('projectCategory').value,
+                status: document.getElementById('projectStatus').value,
+                priority: document.getElementById('projectPriority').value,
+                deadline: document.getElementById('projectDeadline').value,
+                color: document.getElementById('projectColor').value
+            };
+
+            try {
+                let success;
+                if (currentEditingProject) {
+                    success = await dataManager.updateProject(currentEditingProject.id, projectData);
+                } else {
+                    success = await dataManager.addProject(projectData);
+                }
+
+                if (success) {
+                    // 同步数据到全局变量
+                    syncGlobalVariables();
+                    // 更新UI
+                    updateDashboard();
+                    renderProjects();
+                    // 关闭模态框
+                    closeProjectModal();
+                    showNotification(currentEditingProject ? '项目更新成功！' : '项目创建成功！', 'success');
+                } else {
+                    showNotification('保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('项目保存错误:', error);
+                showNotification('保存失败，请检查网络连接', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 任务表单提交处理
+        async function handleTaskSubmit(e) {
+            e.preventDefault();
+            if (!currentViewingProject) return;
+
+            showLoading(true);
+
+            const taskData = {
+                name: document.getElementById('taskName').value,
+                description: document.getElementById('taskDescription').value,
+                status: document.getElementById('taskStatus').value,
+                priority: document.getElementById('taskPriority').value,
+                projectId: currentViewingProject.id
+            };
+
+            try {
+                let success;
+                if (currentEditingTask) {
+                    success = await dataManager.updateTask(currentEditingTask.id, taskData);
+                } else {
+                    success = await dataManager.addTask(taskData);
+                }
+
+                if (success) {
+                    await loadFromLocalStorage();
+                    closeTaskModal();
+                    if (currentViewingProject) {
+                        viewProjectDetail(currentViewingProject.id);
+                    }
+                    showNotification(currentEditingTask ? '任务更新成功！' : '任务创建成功！', 'success');
+                } else {
+                    showNotification('保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('任务保存错误:', error);
+                showNotification('保存失败，请检查网络连接', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 删除计划
+        async function deletePlan(planId) {
+            if (confirm('确定要删除这个计划吗？相关项目将自动取消关联。')) {
+                showLoading(true);
+                try {
+                    const success = await dataManager.deletePlan(planId);
+                    if (success) {
+                        // 同步数据到全局变量
+                        syncGlobalVariables();
+                        // 更新所有相关UI
+                        updateDashboard();
+                        renderPlans();
+                        renderProjects();
+                        // 更新项目计划选项
+                        updateProjectPlanOptions();
+                        showNotification('计划删除成功！相关项目已自动取消关联。', 'success');
+                    } else {
+                        showNotification('删除失败，请重试', 'error');
+                    }
+                } catch (error) {
+                    console.error('计划删除错误:', error);
+                    showNotification('删除失败，请检查网络连接', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // 删除项目
+        async function deleteProject(projectId) {
+            if (confirm('确定要删除这个项目吗？')) {
+                showLoading(true);
+                try {
+                    const success = await dataManager.deleteProject(projectId);
+                    if (success) {
+                        await loadFromLocalStorage();
+                        showNotification('项目删除成功！', 'success');
+                    } else {
+                        showNotification('删除失败，请重试', 'error');
+                    }
+                } catch (error) {
+                    console.error('项目删除错误:', error);
+                    showNotification('删除失败，请检查网络连接', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // 编辑计划
+        async function editPlan(planId) {
+            try {
+                // 从服务器获取最新的计划数据
+                await loadFromLocalStorage();
+
+                const plan = plans.find(p => p.id === planId);
+                if (!plan) {
+                    showNotification('计划不存在', 'error');
+                    return;
+                }
+
+                currentEditingPlan = plan;
+
+                // 查找模态框标题元素
+                let modalTitle = document.getElementById('planModalTitle');
+                if (!modalTitle) {
+                    // 如果不存在，可能是项目模态框，尝试获取项目模态框标题
+                    modalTitle = document.getElementById('modalTitle');
+                }
+                if (modalTitle) {
+                    modalTitle.textContent = '编辑计划';
+                }
+
+                // 填充表单数据
+                document.getElementById('planName').value = plan.name;
+                document.getElementById('planDescription').value = plan.description || '';
+                document.getElementById('planCategory').value = plan.category;
+                document.getElementById('planStatus').value = plan.status;
+                document.getElementById('planStartDate').value = plan.startDate || '';
+                document.getElementById('planEndDate').value = plan.endDate || '';
+                document.getElementById('planColor').value = plan.color || '#6366f1';
+
+                document.getElementById('planModal').classList.add('show');
+            } catch (error) {
+                console.error('编辑计划错误:', error);
+                showNotification('加载计划数据失败', 'error');
+            }
+        }
+
+        // 编辑项目
+        async function editProject(projectId) {
+            try {
+                // 从服务器获取最新的项目数据
+                await loadFromLocalStorage();
+
+                const project = projects.find(p => p.id === projectId);
+                if (!project) {
+                    showNotification('项目不存在', 'error');
+                    return;
+                }
+
+                currentEditingProject = project;
+
+                const modalTitle = document.getElementById('modalTitle');
+                if (modalTitle) {
+                    modalTitle.textContent = '编辑项目';
+                }
+
+                // 填充表单数据
+                document.getElementById('projectName').value = project.name;
+                document.getElementById('projectPlan').value = project.planId || '';
+                document.getElementById('projectDescription').value = project.description || '';
+                document.getElementById('projectCategory').value = project.category;
+                document.getElementById('projectStatus').value = project.status;
+                document.getElementById('projectPriority').value = project.priority;
+                document.getElementById('projectDeadline').value = project.deadline || '';
+                document.getElementById('projectColor').value = project.color || '#3b82f6';
+
+                document.getElementById('projectModal').classList.add('show');
+            } catch (error) {
+                console.error('编辑项目错误:', error);
+                showNotification('加载项目数据失败', 'error');
+            }
+        }
+
+        // 编辑任务
+        async function editTask(taskId) {
+            try {
+                // 从服务器获取最新的任务数据
+                await loadFromLocalStorage();
+
+                const task = tasks.find(t => t.id === taskId);
+                if (!task) {
+                    showNotification('任务不存在', 'error');
+                    return;
+                }
+
+                currentEditingTask = task;
+
+                const taskModalTitle = document.getElementById('taskModalTitle');
+                if (taskModalTitle) {
+                    taskModalTitle.textContent = '编辑任务';
+                }
+
+                // 填充表单数据
+                document.getElementById('taskName').value = task.name;
+                document.getElementById('taskDescription').value = task.description || '';
+                document.getElementById('taskStatus').value = task.status;
+                document.getElementById('taskPriority').value = task.priority;
+
+                document.getElementById('taskModal').classList.add('show');
+            } catch (error) {
+                console.error('编辑任务错误:', error);
+                showNotification('加载任务数据失败', 'error');
+            }
+        }
+
+        // 删除任务
+        async function deleteTask(taskId) {
+            if (confirm('确定要删除这个任务吗？')) {
+                showLoading(true);
+                try {
+                    const success = await dataManager.deleteTask(taskId);
+                    if (success) {
+                        await loadFromLocalStorage();
+                        if (currentViewingProject) {
+                            viewProjectDetail(currentViewingProject.id);
+                        }
+                        showNotification('任务删除成功！', 'success');
+                    } else {
+                        showNotification('删除失败，请重试', 'error');
+                    }
+                } catch (error) {
+                    console.error('任务删除错误:', error);
+                    showNotification('删除失败，请检查网络连接', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // 显示加载状态
+        function showLoading(show) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (show) {
+                loadingOverlay.classList.add('show');
+            } else {
+                loadingOverlay.classList.remove('show');
+            }
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.className = 'connection-status connected';
+                statusElement.innerHTML = '<i class="fas fa-circle"></i> 已连接';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                statusElement.innerHTML = '<i class="fas fa-circle"></i> 连接断开';
+            }
+        }
+
+        // 更新用户信息显示
+        function updateUserInfo() {
+            const usernameElement = document.getElementById('currentUsername');
+            if (usernameElement) {
+                // 从服务器获取当前用户信息
+                fetch('/api/check-auth')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.authenticated && data.username) {
+                            usernameElement.textContent = data.username;
+                        } else {
+                            // 未认证，重定向到登录页面
+                            window.location.href = '/login.html';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取用户信息失败:', error);
+                        // 发生错误时重定向到登录页面
+                        window.location.href = '/login.html';
+                    });
+            }
+        }
+
+        // 登出功能
+        function logout() {
+            if (confirm('确定要登出吗？')) {
+                fetch('/api/logout', {
+                    method: 'POST'
+                })
+                .then(() => {
+                    // 登出成功，重定向到登录页面
+                    window.location.href = '/login.html';
+                })
+                .catch(error => {
+                    console.error('登出失败:', error);
+                    // 即使失败也重定向到登录页面
+                    window.location.href = '/login.html';
+                });
+            }
+        }
+
+        // ==================== 数据同步和全局变量 ====================
+
+        // 同步数据到全局变量
+        function syncGlobalVariables() {
+            plans = dataManager.plans;
+            projects = dataManager.projects;
+            tasks = dataManager.tasks;
+            records = dataManager.records;
+        }
+
+        // ==================== 计划和项目管理功能 ====================
+
+        // 查看计划详情
+        function viewPlanDetail(planId) {
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) return;
+
+            currentViewingPlan = plan;
+
+            const categoryNames = {
+                career: '职业发展',
+                skill: '技能提升',
+                life: '生活规划',
+                creative: '创意项目'
+            };
+
+            const statusNames = {
+                draft: '草稿',
+                active: '执行中',
+                completed: '已完成',
+                archived: '已归档'
+            };
+
+            const planInfo = document.querySelector('.plan-detail-info');
+            planInfo.innerHTML = `
+                <h3 style="color: #ffffff; margin-bottom: 1rem; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">${plan.name}</h3>
+                <div class="detail-row">
+                    <span class="detail-label">背景颜色</span>
+                    <span class="detail-value">
+                        <span style="display: inline-block; width: 20px; height: 20px; background: ${plan.color || '#6366f1'}; border-radius: 4px; vertical-align: middle; margin-right: 0.5rem;"></span>
+                        ${plan.color || '#6366f1'}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">分类</span>
+                    <span class="detail-value">${categoryNames[plan.category]}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">状态</span>
+                    <span class="detail-value"><span class="plan-status ${plan.status}">${statusNames[plan.status]}</span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">描述</span>
+                    <span class="detail-value">${plan.description || '暂无描述'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">开始日期</span>
+                    <span class="detail-value">${plan.startDate ? new Date(plan.startDate).toLocaleDateString('zh-CN') : '未设定'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">结束日期</span>
+                    <span class="detail-value">${plan.endDate ? new Date(plan.endDate).toLocaleDateString('zh-CN') : '未设定'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">创建时间</span>
+                    <span class="detail-value">${new Date(plan.createdAt).toLocaleDateString('zh-CN')}</span>
+                </div>
+            `;
+
+            // 渲染相关项目
+            let relatedProjects = projects.filter(p => p.planId === planId);
+            const planProjectsList = document.getElementById('planProjectsList');
+
+            // 应用排序
+            const currentSortOrder = planProjectSortOrder[planId] || 'asc';
+            relatedProjects = sortByDate(relatedProjects, currentSortOrder);
+
+            // 更新排序按钮状态
+            updatePlanProjectSortButton(planId, currentSortOrder);
+
+            if (relatedProjects.length === 0) {
+                planProjectsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-project-diagram"></i>
+                        <h3>还没有相关项目</h3>
+                        <p>创建项目时可以选择关联到这个计划</p>
+                    </div>
+                `;
+            } else {
+                planProjectsList.innerHTML = relatedProjects.map(project => `
+                    <div class="project-list-item" onclick="viewProjectDetail('${project.id}')">
+                        <div>
+                            <div class="project-list-item-title">${project.name}</div>
+                            <div class="project-list-item-status project-status ${project.status}">${
+                                project.status === 'planning' ? '计划中' :
+                                project.status === 'active' ? '进行中' :
+                                project.status === 'completed' ? '已完成' : '已暂停'
+                            }</div>
+                            <div class="project-list-item-date">
+                                <i class="fas fa-calendar"></i>
+                                ${new Date(project.createdAt || 0).toLocaleDateString('zh-CN')}
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color: #64748b;"></i>
+                    </div>
+                `).join('');
+            }
+
+            // 处理封面图片显示
+            const planCoverImage = document.getElementById('planCoverImage');
+            if (planCoverImage) {
+                // 检查计划是否有图片或颜色背景
+                if (plan.image || plan.color) {
+                    planCoverImage.classList.remove('empty');
+                    if (plan.image) {
+                        planCoverImage.innerHTML = `<img src="${plan.image}" alt="${plan.name}">`;
+                    } else if (plan.color) {
+                        planCoverImage.innerHTML = `
+                            <div class="color-placeholder" style="width: 100%; height: 100%; background: ${plan.color}; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-lightbulb" style="color: white; font-size: 3rem; opacity: 0.7;"></i>
+                            </div>
+                        `;
+                    }
+                } else {
+                    planCoverImage.classList.add('empty');
+                    planCoverImage.innerHTML = '';
+                }
+            }
+
+            document.getElementById('planDetailModal').classList.add('show');
+        }
+
+        // 关闭计划详情模态框
+        function closePlanDetailModal() {
+            document.getElementById('planDetailModal').classList.remove('show');
+            currentViewingPlan = null;
+        }
+
+  
+        // 关闭计划模态框
+        function closePlanModal() {
+            document.getElementById('planModal').classList.remove('show');
+            document.getElementById('planForm').reset();
+            currentEditingPlan = null;
+        }
+
+    
+        // 查看项目详情
+        function viewProjectDetail(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            currentViewingProject = project;
+
+            const categoryNames = {
+                work: '工作',
+                personal: '个人',
+                study: '学习',
+                creative: '创意'
+            };
+
+            const statusNames = {
+                planning: '计划中',
+                active: '进行中',
+                completed: '已完成',
+                paused: '已暂停'
+            };
+
+            const priorityNames = {
+                low: '低',
+                medium: '中',
+                high: '高'
+            };
+
+            // 获取关联的计划信息
+            const relatedPlan = project.planId ? plans.find(p => p.id === project.planId) : null;
+
+            
+            const projectInfo = document.querySelector('.project-detail-info');
+            projectInfo.innerHTML = `
+                <h3 style="color: #ffffff; margin-bottom: 1rem; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">${project.name}</h3>
+                <div class="detail-row">
+                    <span class="detail-label">背景颜色</span>
+                    <span class="detail-value">
+                        <span style="display: inline-block; width: 20px; height: 20px; background: ${project.color || '#3b82f6'}; border-radius: 4px; vertical-align: middle; margin-right: 0.5rem;"></span>
+                        ${project.color || '#3b82f6'}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">所属计划</span>
+                    <span class="detail-value">${relatedPlan ? relatedPlan.name : '无关联计划'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">分类</span>
+                    <span class="detail-value">${categoryNames[project.category]}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">状态</span>
+                    <span class="detail-value"><span class="project-status ${project.status}">${statusNames[project.status]}</span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">优先级</span>
+                    <span class="detail-value"><span class="priority-${project.priority}">${priorityNames[project.priority]}</span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">描述</span>
+                    <span class="detail-value">${project.description || '暂无描述'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">截止日期</span>
+                    <span class="detail-value">${project.deadline ? new Date(project.deadline).toLocaleDateString('zh-CN') : '未设定'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">创建时间</span>
+                    <span class="detail-value">${new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
+                </div>
+            `;
+
+            // 处理封面图片显示
+            const projectCoverImage = document.getElementById('projectCoverImage');
+            if (projectCoverImage) {
+                // 检查项目是否有图片或颜色背景
+                if (project.image || project.color) {
+                    projectCoverImage.classList.remove('empty');
+                    if (project.image) {
+                        projectCoverImage.innerHTML = `<img src="${project.image}" alt="${project.name}">`;
+                    } else if (project.color) {
+                        projectCoverImage.innerHTML = `
+                            <div class="color-placeholder" style="width: 100%; height: 100%; background: ${project.color}; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-project-diagram" style="color: white; font-size: 3rem; opacity: 0.7;"></i>
+                            </div>
+                        `;
+                    }
+                } else {
+                    projectCoverImage.classList.add('empty');
+                    projectCoverImage.innerHTML = '';
+                }
+            }
+
+            renderProjectTasks(projectId);
+            document.getElementById('projectDetailModal').classList.add('show');
+        }
+
+        // 关闭项目详情模态框
+        function closeProjectDetailModal() {
+            document.getElementById('projectDetailModal').classList.remove('show');
+            currentViewingProject = null;
+        }
+
+        // 渲染项目任务
+        function renderProjectTasks(projectId) {
+            let projectTasks = tasks.filter(t => t.projectId === projectId);
+            const tasksList = document.getElementById('projectTasksList');
+
+            // 应用排序
+            const currentSortOrder = projectTaskSortOrder[projectId] || 'asc';
+            projectTasks = sortByDate(projectTasks, currentSortOrder);
+
+            // 更新排序按钮状态
+            updateProjectTaskSortButton(projectId, currentSortOrder);
+
+            if (projectTasks.length === 0) {
+                tasksList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-tasks"></i>
+                        <h3>还没有任务</h3>
+                        <p>点击"添加任务"按钮创建第一个任务</p>
+                    </div>
+                `;
+                return;
+            }
+
+            tasksList.innerHTML = projectTasks.map(task => createTaskItem(task)).join('');
+        }
+
+      
+        // 关闭项目模态框
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.remove('show');
+            document.getElementById('projectForm').reset();
+            currentEditingProject = null;
+        }
+
+      
+        // 创建任务项
+        function createTaskItem(task) {
+            const statusNames = {
+                pending: '未完成',
+                'in-progress': '进行中',
+                completed: '已完成',
+                blocked: '受阻'
+            };
+
+            const priorityNames = {
+                low: '低',
+                medium: '中',
+                high: '高'
+            };
+
+            return `
+                <div class="task-item">
+                    <div class="task-header">
+                        <div>
+                            <div class="task-title">${task.name}</div>
+                            <div class="task-description">${task.description || '暂无描述'}</div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="project-action-btn" onclick="editTask('${task.id}')" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="project-action-btn" onclick="deleteTask('${task.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="task-meta">
+                        <span class="task-status ${task.status}" onclick="cycleTaskStatus('${task.id}')">${statusNames[task.status]}</span>
+                        <span class="task-priority ${task.priority}">${priorityNames[task.priority]}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 显示添加任务模态框
+        function showAddTaskModal() {
+            if (!currentViewingProject) return;
+
+            currentEditingTask = null;
+            document.getElementById('taskModalTitle').textContent = '新建任务';
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+      
+        // 循环切换任务状态
+        function cycleTaskStatus(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const statusCycle = ['pending', 'in-progress', 'completed', 'blocked'];
+            const currentIndex = statusCycle.indexOf(task.status);
+            const nextIndex = (currentIndex + 1) % statusCycle.length;
+
+            task.status = statusCycle[nextIndex];
+            saveData();
+
+            if (currentViewingProject) {
+                renderProjectTasks(currentViewingProject.id);
+            }
+
+            const statusNames = {
+                pending: '未完成',
+                'in-progress': '进行中',
+                completed: '已完成',
+                blocked: '受阻'
+            };
+
+            showNotification(`任务状态更新为: ${statusNames[task.status]}`);
+        }
+
+        // ==================== 工作记录管理功能 ====================
+
+        // 查看记录
+        function viewRecord(recordId) {
+            const record = records.find(r => r.id === recordId);
+            if (!record) {
+                showNotification('记录不存在', 'error');
+                return;
+            }
+
+            if (record.content && record.content.startsWith('data:')) {
+                // Base64编码的内容
+                const byteCharacters = atob(record.content.split(',')[1]);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: record.type });
+                const fileURL = URL.createObjectURL(blob);
+                window.open(fileURL, '_blank');
+            } else if (record.path) {
+                // 文件路径
+                window.open(record.path, '_blank');
+            } else {
+                showNotification('无法查看记录内容', 'error');
+            }
+        }
+
+        // 下载记录
+        function downloadRecord(recordId) {
+            const record = records.find(r => r.id === recordId);
+            if (!record) {
+                showNotification('记录不存在', 'error');
+                return;
+            }
+
+            if (record.content && record.content.startsWith('data:')) {
+                // Base64编码的内容
+                const link = document.createElement('a');
+                link.href = record.content;
+                link.download = record.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else if (record.path) {
+                // 文件路径
+                const link = document.createElement('a');
+                link.href = record.path;
+                link.download = record.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                showNotification('无法下载记录内容', 'error');
+            }
+        }
+
+        // 删除记录
+        async function deleteRecord(recordId) {
+            if (!confirm('确定要删除这个记录吗？')) return;
+
+            const success = await dataManager.deleteRecord(recordId);
+            if (success) {
+                syncGlobalVariables();
+                updateDashboard();
+                renderRecords();
+                showNotification('记录删除成功！');
+            } else {
+                showNotification('删除失败，请重试', 'error');
+            }
+        }
+
+        // 页面加载完成后更新连接状态和用户信息
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定登出按钮事件
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+
+            // 更新用户信息
+            updateUserInfo();
+
+            // 定期检查认证状态（每5分钟）
+            setInterval(updateUserInfo, 5 * 60 * 1000);
+
+            setTimeout(() => {
+                updateConnectionStatus(true);
+            }, 1000);
+        });
+
+        console.log('🌐 project_manager项目管理系统已加载');
+        console.log('💾 数据将保存到服务器本地文件夹');
+    </script>
+</body>
+</html>

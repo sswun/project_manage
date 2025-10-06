@@ -1,0 +1,33 @@
+[Unit]
+Description=project_manager项目管理系统
+Documentation=https://github.com/project_manager/project-manager
+After=network.target
+
+[Service]
+Type=simple
+User=project_manager
+Group=project_manager
+WorkingDirectory=/mnt/j/files/ASpecialItems/personalWebsite/project_manage
+ExecStart=/usr/bin/python3 /mnt/j/files/ASpecialItems/personalWebsite/project_manage/server.py 8001
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# 环境变量
+Environment=PYTHONPATH=/mnt/j/files/ASpecialItems/personalWebsite/project_manage
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/j/files/ASpecialItems/personalWebsite/project_manage/database
+ReadWritePaths=/mnt/j/files/ASpecialItems/personalWebsite/project_manage/sessions
+
+# 日志设置
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=project_manager-project-manager
+
+[Install]
+WantedBy=multi-user.target

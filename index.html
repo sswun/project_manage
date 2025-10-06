@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>project_manager工作项目管理 - Work Project Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-rocket"></i>
+                    project_manager工作项目管理
+                </h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">
+                        <i class="fas fa-home"></i> 仪表盘
+                    </button>
+                    <button class="nav-btn" data-page="plans">
+                        <i class="fas fa-lightbulb"></i> 计划
+                    </button>
+                    <button class="nav-btn" data-page="projects">
+                        <i class="fas fa-project-diagram"></i> 项目
+                    </button>
+                    <button class="nav-btn" data-page="records">
+                        <i class="fas fa-file-alt"></i> 工作记录
+                    </button>
+                </nav>
+                <div class="header-actions">
+                    <button class="add-plan-btn" id="addPlanBtn">
+                        <i class="fas fa-plus"></i> 新建计划
+                    </button>
+                    <button class="add-project-btn" id="addProjectBtn">
+                        <i class="fas fa-plus"></i> 新建项目
+                    </button>
+                </div>
+            </div>
+            <div class="creator-info">
+                <i class="fas fa-code"></i> 由 project_manager 使用 Claude Code 精心打造
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Page -->
+            <section class="page" id="dashboardPage">
+                <div class="dashboard-overview">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div class="stat-number" id="totalPlans">0</div>
+                            <div class="stat-label">总计划数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="stat-number" id="totalProjects">0</div>
+                            <div class="stat-label">总项目数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <div class="stat-number" id="activeProjects">0</div>
+                            <div class="stat-label">进行中</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-number" id="completedProjects">0</div>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="recent-section">
+                        <h3>最新计划</h3>
+                        <div class="plan-grid" id="recentPlansGrid">
+                            <!-- 计划卡片将动态生成 -->
+                        </div>
+                    </div>
+
+                    <div class="recent-section">
+                        <h3>最新项目</h3>
+                        <div class="project-grid" id="recentProjectsGrid">
+                            <!-- 项目卡片将动态生成 -->
+                        </div>
+                    </div>
+
+                    <div class="quick-actions-section">
+                        <h3>快速操作</h3>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="showAddPlanModal()">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>创建新计划</span>
+                            </button>
+                            <button class="action-btn" onclick="showAddProjectModal()">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>创建新项目</span>
+                            </button>
+                            <button class="action-btn" onclick="document.getElementById('recordFileInput').click()">
+                                <i class="fas fa-upload"></i>
+                                <span>上传工作记录</span>
+                            </button>
+                            <button class="action-btn" onclick="document.getElementById('backupFileInput').click()">
+                                <i class="fas fa-history"></i>
+                                <span>恢复数据</span>
+                            </button>
+                            <button class="action-btn" onclick="exportData()">
+                                <i class="fas fa-download"></i>
+                                <span>导出数据</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Plans Page -->
+            <section class="page hidden" id="plansPage">
+                <div class="page-header">
+                    <h2>计划管理</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="planSearch" placeholder="搜索计划..." class="search-input">
+                        <select id="planStatusFilter" class="filter-select">
+                            <option value="all">全部状态</option>
+                            <option value="draft">草稿</option>
+                            <option value="active">执行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="archived">已归档</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="plans-container">
+                    <div class="plan-grid" id="allPlansGrid">
+                        <!-- 计划卡片将动态生成 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Page -->
+            <section class="page hidden" id="projectsPage">
+                <div class="page-header">
+                    <h2>项目管理</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="projectSearch" placeholder="搜索项目..." class="search-input">
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">全部状态</option>
+                            <option value="planning">计划中</option>
+                            <option value="active">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="paused">已暂停</option>
+                        </select>
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="all">全部分类</option>
+                            <option value="work">工作</option>
+                            <option value="personal">个人</option>
+                            <option value="study">学习</option>
+                            <option value="creative">创意</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="projects-container">
+                    <div class="project-grid" id="allProjectsGrid">
+                        <!-- 项目卡片将动态生成 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Records Page -->
+            <section class="page hidden" id="recordsPage">
+                <div class="page-header">
+                    <h2>工作记录</h2>
+                    <button class="upload-btn" onclick="document.getElementById('recordFileInput').click()">
+                        <i class="fas fa-upload"></i> 上传记录
+                    </button>
+                </div>
+
+                <div class="records-container">
+                    <div class="record-list" id="recordList">
+                        <!-- 记录将动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Plan Modal -->
+    <div class="modal" id="planModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="planModalTitle">新建计划</h3>
+                <button class="close-btn" onclick="closePlanModal()">&times;</button>
+            </div>
+            <form id="planForm">
+                <div class="form-group">
+                    <label for="planName">计划名称</label>
+                    <input type="text" id="planName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="planDescription">计划描述</label>
+                    <textarea id="planDescription" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="planCategory">计划分类</label>
+                    <select id="planCategory">
+                        <option value="career">职业发展</option>
+                        <option value="skill">技能提升</option>
+                        <option value="life">生活规划</option>
+                        <option value="creative">创意项目</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="planStatus">计划状态</label>
+                    <select id="planStatus">
+                        <option value="draft">草稿</option>
+                        <option value="active">执行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="archived">已归档</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="planStartDate">开始日期</label>
+                    <input type="date" id="planStartDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="planEndDate">结束日期</label>
+                    <input type="date" id="planEndDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="planImage">封面图片</label>
+                    <div class="image-upload">
+                        <input type="file" id="planImage" accept="image/*" style="display: none;">
+                        <div class="image-upload-preview" id="planImagePreview">
+                            <i class="fas fa-image"></i>
+                            <span>点击上传图片</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closePlanModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新建项目</h3>
+                <button class="close-btn" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label for="projectName">项目名称</label>
+                    <input type="text" id="projectName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectPlan">所属计划</label>
+                    <select id="projectPlan">
+                        <option value="">不关联计划</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectDescription">项目描述</label>
+                    <textarea id="projectDescription" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectCategory">项目分类</label>
+                    <select id="projectCategory">
+                        <option value="work">工作</option>
+                        <option value="personal">个人</option>
+                        <option value="study">学习</option>
+                        <option value="creative">创意</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectStatus">项目状态</label>
+                    <select id="projectStatus">
+                        <option value="planning">计划中</option>
+                        <option value="active">进行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="paused">已暂停</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectPriority">优先级</label>
+                    <select id="projectPriority">
+                        <option value="low">低</option>
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectDeadline">截止日期</label>
+                    <input type="date" id="projectDeadline">
+                </div>
+
+                <div class="form-group">
+                    <label for="projectImage">封面图片</label>
+                    <div class="image-upload">
+                        <input type="file" id="projectImage" accept="image/*" style="display: none;">
+                        <div class="image-upload-preview" id="projectImagePreview">
+                            <i class="fas fa-image"></i>
+                            <span>点击上传图片</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeProjectModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plan Detail Modal -->
+    <div class="modal" id="planDetailModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="planDetailTitle">计划详情</h3>
+                <button class="close-btn" onclick="closePlanDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="plan-cover-image" id="planCoverImage">
+                    <!-- 计划封面图片 -->
+                </div>
+                <div class="plan-detail-info">
+                    <!-- 计划详情内容 -->
+                </div>
+                <div class="related-projects">
+                    <h4>相关项目</h4>
+                    <div class="project-list" id="planProjectsList">
+                        <!-- 相关项目列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div class="modal" id="projectDetailModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="projectDetailTitle">项目详情</h3>
+                <button class="close-btn" onclick="closeProjectDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-cover-image" id="projectCoverImage">
+                    <!-- 项目封面图片 -->
+                </div>
+                <div class="project-detail-info">
+                    <!-- 项目详情内容 -->
+                </div>
+                <div class="tasks-section">
+                    <div class="tasks-header">
+                        <h4>任务列表</h4>
+                        <button class="add-task-btn" onclick="showAddTaskModal()">
+                            <i class="fas fa-plus"></i> 添加任务
+                        </button>
+                    </div>
+                    <div class="tasks-list" id="projectTasksList">
+                        <!-- 任务列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">新建任务</h3>
+                <button class="close-btn" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="taskName">任务名称</label>
+                    <input type="text" id="taskName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskDescription">任务描述</label>
+                    <textarea id="taskDescription" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskStatus">任务状态</label>
+                    <select id="taskStatus">
+                        <option value="pending">未完成</option>
+                        <option value="in-progress">进行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="blocked">受阻</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskPriority">任务优先级</label>
+                    <select id="taskPriority">
+                        <option value="low">低</option>
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeTaskModal()" class="btn btn-cancel">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden file input for records -->
+    <input type="file" id="recordFileInput" accept=".pdf,.txt,.md" style="display: none;">
+
+    <!-- Hidden file input for backup data -->
+    <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+
+    <script src="script.js"></script>
+</body>
+</html>
