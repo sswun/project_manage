@@ -1,0 +1,41 @@
+{
+  "plans": [
+    {
+      "id": "plan_example_001",
+      "name": "示例计划 - 网站开发",
+      "description": "这是一个示例计划，展示如何创建和管理项目计划",
+      "category": "career",
+      "status": "active",
+      "startDate": "2025-10-01",
+      "endDate": "2025-12-31",
+      "image": null,
+      "createdAt": "2025-10-06T00:00:00.000Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "project_example_001",
+      "planId": "plan_example_001",
+      "name": "示例项目 - 前端开发",
+      "description": "前端界面设计和开发工作",
+      "category": "work",
+      "status": "active",
+      "priority": "high",
+      "deadline": "2025-11-15",
+      "image": null,
+      "createdAt": "2025-10-06T00:00:00.000Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_example_001",
+      "projectId": "project_example_001",
+      "name": "示例任务 - 设计界面原型",
+      "description": "创建网站的界面原型设计",
+      "status": "in-progress",
+      "priority": "high",
+      "createdAt": "2025-10-06T00:00:00.000Z"
+    }
+  ],
+  "records": []
+}

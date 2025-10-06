@@ -1,0 +1,26 @@
+[
+  {
+    "name": "测试项目",
+    "planId": "id_1759746427018_8lto116ve",
+    "description": "这是一个测试项目",
+    "category": "work",
+    "status": "planning",
+    "priority": "low",
+    "deadline": "2025-10-02",
+    "color": "#8b5cf6",
+    "id": "id_1759746455352_wppjsbaa3",
+    "createdAt": "2025-10-06T10:27:35.352Z"
+  },
+  {
+    "name": "第二个测试项目",
+    "planId": "id_1759746427018_8lto116ve",
+    "description": "222",
+    "category": "personal",
+    "status": "planning",
+    "priority": "medium",
+    "deadline": "2025-10-25",
+    "color": "#10b981",
+    "id": "id_1759746515024_m104mzrbx",
+    "createdAt": "2025-10-06T10:28:35.024Z"
+  }
+]

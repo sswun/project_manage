@@ -38,9 +38,9 @@ Thumbs.db
 # Logs
 *.log
 
-# Database files
-database/
-sessions/
+# Database files (allow data storage)
+# database/
+# sessions/
 
 # Temporary files
 *.tmp

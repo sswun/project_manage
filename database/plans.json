@@ -1,0 +1,24 @@
+[
+  {
+    "name": "测试计划",
+    "description": "这是一个测试计划",
+    "category": "career",
+    "status": "active",
+    "startDate": "2025-10-01",
+    "endDate": "2025-10-10",
+    "color": "#6366f1",
+    "id": "id_1759746427018_8lto116ve",
+    "createdAt": "2025-10-06T10:27:07.018Z"
+  },
+  {
+    "name": "测试计划v2",
+    "description": "无",
+    "category": "career",
+    "status": "active",
+    "startDate": "2025-10-01",
+    "endDate": "2025-10-09",
+    "color": "#ec4899",
+    "id": "id_1759746484644_483fa3y7g",
+    "createdAt": "2025-10-06T10:28:04.644Z"
+  }
+]
